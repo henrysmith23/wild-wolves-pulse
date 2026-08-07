@@ -1,56 +1,80 @@
-# ABOUTME: Streamlit dashboard showing Liverpool fan sentiment trends.
-# ABOUTME: Displays hourly charts, current metrics, and the latest forum post.
+# ABOUTME: Streamlit dashboard showing Liverpool FC cumulative goals by matchweek.
+# ABOUTME: Overlays current season against last season for scored and conceded.
 
-import streamlit as st
-import pandas as pd
 import json
 import os
+
+import altair as alt
+import pandas as pd
+import streamlit as st
 
 st.title("Liverpool Pulse")
 
 DATA_FILE = "data.json"
-LATEST_FILE = "latest_post.json"
 
 
-def load_json(path):
-    if os.path.exists(path):
-        try:
-            with open(path, "r") as f:
-                return json.load(f)
-        except:
-            return None
-    return None
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        return None
+    with open(DATA_FILE, "r") as f:
+        return json.load(f)
 
 
-data = load_json(DATA_FILE) or []
-latest = load_json(LATEST_FILE)
+data = load_data()
 
-liverpool_data = [row for row in data if row["team"] == "Liverpool"]
+if not data or not data.get("seasons"):
+    st.info("No match data yet. Run the collector to fetch results.")
+    st.stop()
 
-# ---------------- METRICS ----------------
-if liverpool_data:
-    latest_row = liverpool_data[-1]
+rows_scored = []
+rows_conceded = []
 
-    st.metric("Sentiment Score", f"{latest_row['sentiment']:.1f}")
-    st.metric("Mentions (Last Hour)", latest_row["mentions"])
-else:
-    st.info("Waiting for first Liverpool data run...")
+for season_label, matches in data["seasons"].items():
+    for m in matches:
+        rows_scored.append({
+            "Matchweek": m["matchweek"],
+            "Goals": m["cum_scored"],
+            "Season": season_label,
+        })
+        rows_conceded.append({
+            "Matchweek": m["matchweek"],
+            "Goals": m["cum_conceded"],
+            "Season": season_label,
+        })
 
-# ---------------- CHARTS ----------------
-if len(liverpool_data) > 1:
-    df = pd.DataFrame(liverpool_data)
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+df_scored = pd.DataFrame(rows_scored)
+df_conceded = pd.DataFrame(rows_conceded)
 
-    st.subheader("Sentiment Over Time")
-    st.line_chart(df.set_index("timestamp")["sentiment"])
+st.subheader("Cumulative Goals Scored")
 
-    st.subheader("Mentions Over Time")
-    st.line_chart(df.set_index("timestamp")["mentions"])
+if not df_scored.empty:
+    chart_scored = (
+        alt.Chart(df_scored)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Matchweek:Q", scale=alt.Scale(domain=[1, 38])),
+            y=alt.Y("Goals:Q"),
+            color=alt.Color("Season:N"),
+            tooltip=["Season", "Matchweek", "Goals"],
+        )
+        .properties(height=400)
+    )
+    st.altair_chart(chart_scored, width="stretch")
 
-# ---------------- LATEST POST ----------------
-if latest:
-    st.subheader("Latest Post")
-    st.write(f"**{latest.get('author', 'Unknown')}:** {latest.get('text', 'N/A')}")
+st.subheader("Cumulative Goals Conceded")
 
-    st.subheader("Latest Post Sentiment")
-    st.write(f"{latest.get('score', 0):.1f} / 100")
+if not df_conceded.empty:
+    chart_conceded = (
+        alt.Chart(df_conceded)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Matchweek:Q", scale=alt.Scale(domain=[1, 38])),
+            y=alt.Y("Goals:Q"),
+            color=alt.Color("Season:N"),
+            tooltip=["Season", "Matchweek", "Goals"],
+        )
+        .properties(height=400)
+    )
+    st.altair_chart(chart_conceded, width="stretch")
+
+st.caption(f"Last updated: {data.get('last_updated', 'unknown')}")
