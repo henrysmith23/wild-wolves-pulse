@@ -10,4 +10,6 @@ Match results from [football-data.org](https://www.football-data.org/) API
 
 A GitHub Actions workflow runs weekly (Tuesdays) to fetch new match results and commit updated data
 
-### Disclaimer
+### AI Disclaimer
+
+The technical development of this dashboard was completed with Claude Code
