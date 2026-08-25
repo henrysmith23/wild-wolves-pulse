@@ -268,7 +268,15 @@
         "cum_conceded": 53
       }
     ],
-    "2026-27": []
+    "2026-27": [
+      {
+        "matchweek": 1,
+        "scored": 2,
+        "conceded": 2,
+        "cum_scored": 2,
+        "cum_conceded": 2
+      }
+    ]
   },
-  "last_updated": "2026-08-18T09:50:39.059340+00:00"
+  "last_updated": "2026-08-25T09:53:36.916040+00:00"
 }
